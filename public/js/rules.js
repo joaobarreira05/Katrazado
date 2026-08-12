@@ -85,9 +85,10 @@ function renderRulesContent() {
     </div>
 
     <div class="rules-section">
-      <h2>📢 Declarações (Previsões)</h2>
+      <h2>📢 Declarações (Previsões) e Liderança</h2>
       <p>Antes de jogar, cada jogador declara quantas vazas acredita que vai ganhar.</p>
       <p>Se há 3 cartas por jogador, podes declarar: <span class="rules-highlight">0, 1, 2 ou 3</span></p>
+      <p>🎯 <strong>Quem puxa as vazas:</strong> O jogador que começa a ronda é quem <strong>puxa a 1ª vaza e TODAS as vazas seguintes</strong> dessa mesma ronda. Ganhar uma vaza dá o ponto da vaza ao vencedor, mas não altera quem puxa a carta inicial na vaza seguinte da mesma ronda!</p>
       <h3>⚠️ Regra da soma:</h3>
       <p>A soma de TODAS as declarações <strong>não pode ser igual</strong> ao número de vazas possíveis. Esta restrição aplica-se apenas ao <strong>último jogador</strong> a declarar.</p>
       <div class="rules-example">

@@ -479,11 +479,11 @@ class Game {
       return trickResult;
     }
 
-    // Start next trick — winner leads
+    // Start next trick — in Katrazado, startingPlayer always leads every trick in the round
     this.currentTrickNumber++;
     this.currentTrick = [];
-    this.trickLeader = result.winnerId;
-    this.currentPlayer = result.winnerId;
+    this.trickLeader = this.startingPlayer;
+    this.currentPlayer = this.startingPlayer;
 
     trickResult.roundComplete = false;
     return trickResult;
