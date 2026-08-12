@@ -1524,6 +1524,21 @@ body {
   box-shadow: 0 1px 4px rgba(0,0,0,0.4);
 }
 
+.card-face-art {
+  width: 42px;
+  height: 42px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  margin: 2px 0;
+  transition: transform var(--transition-fast);
+}
+
+.card:hover .card-face-art {
+  transform: scale(1.08);
+}
+
 .top-bar-controls {
   display: flex;
   align-items: center;

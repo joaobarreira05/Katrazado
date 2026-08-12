@@ -30,6 +30,49 @@ const UI = (() => {
 
   let selectedAvatarId = 1;
 
+  const PLAYER_AVATAR_FILES = [
+    '/assets/avatars/As.png',
+    '/assets/avatars/r.png',
+    '/assets/avatars/r_1.png',
+    '/assets/avatars/v.png',
+    '/assets/avatars/v_1.png',
+    '/assets/avatars/d.png',
+    '/assets/avatars/d_1.png',
+    '/assets/avatars/7.png',
+    '/assets/avatars/7_1.png',
+    '/assets/avatars/6.png',
+  ];
+
+  function getAvatarSrc(id) {
+    if (typeof id === 'number' && id >= 1 && id <= 10) {
+      return PLAYER_AVATAR_FILES[id - 1];
+    }
+    if (typeof id === 'string' && id.length > 0) {
+      return id;
+    }
+    return PLAYER_AVATAR_FILES[0];
+  }
+
+  function getCardFaceImagePath(card) {
+    if (!card || !card.value) return null;
+
+    const val = card.value;
+    const isRedSuit = (card.suit === 'Copas' || card.suit === 'Ouros');
+
+    if (val === 'Ás') return '/assets/avatars/As.png';
+    if (val === 'Rei') return isRedSuit ? '/assets/avatars/r_1.png' : '/assets/avatars/r.png';
+    if (val === 'Valete') return isRedSuit ? '/assets/avatars/v_1.png' : '/assets/avatars/v.png';
+    if (val === 'Dama') return isRedSuit ? '/assets/avatars/d_1.png' : '/assets/avatars/d.png';
+    if (val === '7') return isRedSuit ? '/assets/avatars/7_1.png' : '/assets/avatars/7.png';
+    if (val === '6') return isRedSuit ? '/assets/avatars/6_1.png' : '/assets/avatars/6.png';
+    if (val === '5') return isRedSuit ? '/assets/avatars/5_1.png' : '/assets/avatars/5.png';
+    if (val === '4') return isRedSuit ? '/assets/avatars/4_1.png' : '/assets/avatars/4.png';
+    if (val === '3') return isRedSuit ? '/assets/avatars/3_1.png' : '/assets/avatars/3.png';
+    if (val === '2') return isRedSuit ? '/assets/avatars/2_1.png' : '/assets/avatars/2.png';
+
+    return null;
+  }
+
   function renderAvatarPicker() {
     const grid = document.getElementById('avatar-picker-grid');
     if (!grid) return;
@@ -42,7 +85,8 @@ const UI = (() => {
       item.setAttribute('tabindex', '0');
       item.setAttribute('aria-label', `Escolher Avatar ${i}`);
 
-      item.innerHTML = `<img src="/assets/avatars/${i}.svg" alt="Avatar ${i}">`;
+      const src = getAvatarSrc(i);
+      item.innerHTML = `<img src="${src}" alt="Avatar ${i}" onerror="this.src='/assets/avatars/${i}.svg'">`;
 
       item.addEventListener('click', () => {
         selectedAvatarId = i;
@@ -78,14 +122,21 @@ const UI = (() => {
     const shortValue = VALUE_SHORT[card.value] || card.value;
     const suitSymbol = SUIT_SYMBOLS[card.suit] || card.suit;
 
-    const avatarOverlay = avatarId ? `<img src="/assets/avatars/${avatarId}.svg" class="card-avatar-badge" alt="Avatar">` : '';
+    const cardArtPath = getCardFaceImagePath(card);
+    const cardArtHtml = cardArtPath
+      ? `<img src="${cardArtPath}" class="card-face-art" alt="${card.value}" onerror="this.style.display='none'">`
+      : `<span class="card-value">${shortValue}</span>`;
+
+    const avatarOverlay = avatarId
+      ? `<img src="${getAvatarSrc(avatarId)}" class="card-avatar-badge" alt="Avatar">`
+      : '';
 
     el.innerHTML = `
       <div class="card-corner card-corner-top">
         <span>${shortValue}</span>
         <span class="corner-suit">${suitSymbol}</span>
       </div>
-      <span class="card-value">${shortValue}</span>
+      ${cardArtHtml}
       <span class="card-suit">${suitSymbol}</span>
       ${avatarOverlay}
       <div class="card-corner card-corner-bottom">
@@ -147,7 +198,7 @@ const UI = (() => {
       listEl.innerHTML = state.players.map(p => `
         <li>
           <div style="display:flex;align-items:center;gap:10px;">
-            <img src="/assets/avatars/${p.avatarId || 1}.svg" class="lobby-avatar-img" alt="Avatar">
+            <img src="${getAvatarSrc(p.avatarId || 1)}" class="lobby-avatar-img" alt="Avatar" onerror="this.src='/assets/avatars/1.svg'">
             <span class="player-name">${escapeHtml(p.name)}</span>
           </div>
           ${p.isHost ? '<span class="player-badge">Anfitrião</span>' : ''}
@@ -205,7 +256,7 @@ const UI = (() => {
 
       chip.innerHTML = `
         <div style="display:flex;align-items:center;gap:6px;">
-          <img src="/assets/avatars/${player.avatarId || 1}.svg" class="chip-avatar-img" alt="Avatar">
+          <img src="${getAvatarSrc(player.avatarId || 1)}" class="chip-avatar-img" alt="Avatar" onerror="this.src='/assets/avatars/1.svg'">
           <span class="player-chip-name">${escapeHtml(player.name)}</span>
         </div>
         <span class="player-chip-lives">${hearts}</span>
@@ -499,7 +550,10 @@ const UI = (() => {
         nameLabel.className = 'trick-card-player';
         nameLabel.textContent = play.playerName;
 
-        const cardEl = createCardElement(play.card, { cancelled: isCancelled });
+        const playerObj = state.players ? state.players.find(p => p.id === play.playerId) : null;
+        const playerAvatarId = playerObj ? playerObj.avatarId : null;
+
+        const cardEl = createCardElement(play.card, { cancelled: isCancelled, avatarId: playerAvatarId });
 
         wrapper.appendChild(nameLabel);
         wrapper.appendChild(cardEl);
