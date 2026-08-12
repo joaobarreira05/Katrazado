@@ -38,11 +38,11 @@
   --shadow-glow-gold: 0 0 20px rgba(240, 192, 64, 0.3);
 
   /* Card colors */
-  --card-red: #e74c3c;
-  --card-black: #e8ecf1;
-  --card-bg: #f5f0e8;
-  --card-bg-dark: #d4c9b8;
-  --card-border: #c4b9a8;
+  --card-red: #dc2626;
+  --card-black: #0f172a;
+  --card-bg: #ffffff;
+  --card-bg-dark: #e2e8f0;
+  --card-border: #cbd5e1;
 
   /* Spacing */
   --space-xs: 4px;
@@ -841,7 +841,7 @@ body {
 }
 
 .card.black {
-  color: #2c3e50;
+  color: var(--card-black);
 }
 
 .card-value {
@@ -963,7 +963,8 @@ body {
 
 .hand-cards .card.disabled {
   cursor: not-allowed;
-  opacity: 0.4;
+  opacity: 0.85;
+  filter: brightness(0.95);
 }
 
 .hand-cards .card.disabled:hover {
