@@ -53,9 +53,9 @@ function scheduleTurnTimer(io, game) {
   if (!activePlayer) return;
 
   const timer = setTimeout(() => {
-    console.log(`[Katrazado] 12s timer expired for ${game.getPlayerName(activePlayer)} in ${game.gameState}`);
+    console.log(`[Katrazado] 20s timer expired for ${game.getPlayerName(activePlayer)} in ${game.gameState}`);
     handleTimeoutAction(io, game, activePlayer);
-  }, 12000);
+  }, 20000);
 
   turnTimers.set(game.gameId, timer);
 }
@@ -125,11 +125,11 @@ function handleTimeoutAction(io, game, playerId) {
               setTimeout(() => {
                 advanceGameFlow(io, game);
               }, 3000);
-            }, 2000);
+            }, 5000);
           } else {
             setTimeout(() => {
               broadcastGameState(io, game);
-            }, 1500);
+            }, 5000);
           }
         } else {
           broadcastGameState(io, game);
@@ -412,12 +412,12 @@ function registerSocketHandlers(io) {
             setTimeout(() => {
               advanceGameFlow(io, game);
             }, 3000);
-          }, 2000);
+          }, 5000);
         } else {
-          // More tricks to play — update state after brief delay
+          // More tricks to play — update state after 5 seconds so players can see all cards
           setTimeout(() => {
             broadcastGameState(io, game);
-          }, 1500);
+          }, 5000);
         }
       } else {
         // Update state for next player

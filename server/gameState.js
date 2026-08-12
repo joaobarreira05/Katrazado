@@ -639,7 +639,7 @@ class Game {
       myId: playerId,
       myName: this.getPlayerName(playerId),
       turnStartTime: this.turnStartTime || Date.now(),
-      turnDuration: 12, // 12 seconds per turn
+      turnDuration: 20, // 20 seconds per turn
     };
 
     // Add player-specific data

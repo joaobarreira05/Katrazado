@@ -158,7 +158,7 @@ const UI = (() => {
       if (state.bids && state.bids[player.id] !== undefined) {
         const bid = state.bids[player.id].bid;
         const tricks = state.tricksWon && state.tricksWon[player.id] ? state.tricksWon[player.id].count : 0;
-        infoHtml = `<span class="player-chip-info">P:${bid} V:${tricks}</span>`;
+        infoHtml = `<span class="player-chip-info">P: ${bid} | V: ${tricks}</span>`;
       }
 
       chip.innerHTML = `
@@ -462,7 +462,7 @@ const UI = (() => {
 
     setTimeout(() => {
       overlay.classList.add('hidden');
-    }, 1800);
+    }, 4500);
   }
 
   // =========================================================================
