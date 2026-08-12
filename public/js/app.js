@@ -107,6 +107,17 @@
     const rulesGameBtn = document.getElementById('btn-show-rules-game');
     if (rulesGameBtn) rulesGameBtn.addEventListener('click', () => showRules('screen-game'));
 
+    // Audio toggle
+    const audioBtn = document.getElementById('btn-toggle-audio');
+    if (audioBtn) {
+      audioBtn.addEventListener('click', () => {
+        if (typeof AudioFX !== 'undefined') {
+          const isMuted = AudioFX.toggleMute();
+          audioBtn.textContent = isMuted ? '🔇' : '🔊';
+        }
+      });
+    }
+
     // Rules close
     const closeRulesBtn = document.getElementById('btn-close-rules');
     if (closeRulesBtn) closeRulesBtn.addEventListener('click', hideRules);
@@ -194,12 +205,13 @@
 
   function handleRoundStarted(data) {
     console.log('[App] Round started:', data);
-    // Hide any lingering overlays
     hideAllOverlays();
   }
 
   function handleCardsDealt(data) {
     console.log('[App] Cards dealt. Blind:', data.isBlind);
+    if (typeof AudioFX !== 'undefined') AudioFX.playDeal();
+
     if (currentState) {
       if (data.isBlind) {
         currentState.isBlind = true;
@@ -231,6 +243,7 @@
 
   function handleCardPlayed(data) {
     console.log(`[App] ${data.playerName} played ${data.card.value} ${data.card.suit}`);
+    if (typeof AudioFX !== 'undefined') AudioFX.playCardPlay();
   }
 
   function handleHandUpdated(data) {
@@ -272,6 +285,7 @@
   function handleCreateGame() {
     const nameInput = document.getElementById('player-name-input');
     const name = nameInput ? nameInput.value.trim() : '';
+    const avatarId = UI.getSelectedAvatarId();
 
     if (!name) {
       UI.showError('home-error', 'Escreve o teu nome primeiro!');
@@ -283,7 +297,7 @@
       return;
     }
 
-    SocketClient.emit('create-game', { playerName: name }, (response) => {
+    SocketClient.emit('create-game', { playerName: name, avatarId }, (response) => {
       if (response.success) {
         currentState = response.state;
         UI.showScreen('screen-lobby');
@@ -299,6 +313,7 @@
     const codeInput = document.getElementById('game-code-input');
     const name = nameInput ? nameInput.value.trim() : '';
     const code = codeInput ? codeInput.value.trim().toUpperCase() : '';
+    const avatarId = UI.getSelectedAvatarId();
 
     if (!name) {
       UI.showError('home-error', 'Escreve o teu nome primeiro!');
@@ -315,7 +330,7 @@
       return;
     }
 
-    SocketClient.emit('join-game', { gameId: code, playerName: name }, (response) => {
+    SocketClient.emit('join-game', { gameId: code, playerName: name, avatarId }, (response) => {
       if (response.success) {
         currentState = response.state;
         UI.showScreen('screen-lobby');

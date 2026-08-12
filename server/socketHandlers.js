@@ -222,19 +222,19 @@ function registerSocketHandlers(io) {
     // -----------------------------------------------------------------------
     // CREATE GAME
     // -----------------------------------------------------------------------
-    socket.on('create-game', ({ playerName, initialLives }, callback) => {
+    socket.on('create-game', ({ playerName, avatarId, initialLives }, callback) => {
       // Generate unique code
       let code;
       do {
         code = generateGameCode();
       } while (games.has(code));
 
-      const game = new Game(code, socket.id, playerName, initialLives || 5);
+      const game = new Game(code, socket.id, playerName, avatarId || 1, initialLives || 5);
       games.set(code, game);
       playerGames.set(socket.id, code);
       socket.join(code);
 
-      console.log(`[Katrazado] Game created: ${code} by ${playerName}`);
+      console.log(`[Katrazado] Game created: ${code} by ${playerName} (avatar: ${avatarId || 1})`);
 
       const response = {
         success: true,
@@ -248,7 +248,7 @@ function registerSocketHandlers(io) {
     // -----------------------------------------------------------------------
     // JOIN GAME
     // -----------------------------------------------------------------------
-    socket.on('join-game', ({ gameId, playerName }, callback) => {
+    socket.on('join-game', ({ gameId, playerName, avatarId }, callback) => {
       const code = gameId.toUpperCase().trim();
       const game = games.get(code);
 
@@ -257,7 +257,7 @@ function registerSocketHandlers(io) {
         return;
       }
 
-      const result = game.addPlayer(socket.id, playerName);
+      const result = game.addPlayer(socket.id, playerName, avatarId || 1);
       if (!result.success) {
         if (callback) callback({ success: false, reason: result.reason });
         return;

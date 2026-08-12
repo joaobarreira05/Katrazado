@@ -28,6 +28,11 @@
           <input type="text" id="player-name-input" placeholder="Escreve o teu nome..." maxlength="15" autocomplete="off">
         </div>
 
+        <div class="avatar-picker-group">
+          <label>Escolhe a tua Cara / Avatar:</label>
+          <div id="avatar-picker-grid" class="avatar-picker-grid"></div>
+        </div>
+
         <button id="btn-create-game" class="btn btn-primary btn-large">
           <span class="btn-icon">✦</span>
           Criar Sala
@@ -103,7 +108,10 @@
         <span id="cards-per-player" class="cards-count">1</span>
         <span class="cards-label">carta(s)</span>
       </div>
-      <button id="btn-show-rules-game" class="btn btn-icon-only btn-rules-game" title="Regras">📖</button>
+      <div class="top-bar-controls">
+        <button id="btn-toggle-audio" class="btn btn-icon-only" title="Ligar/Desligar Som" aria-label="Som">🔊</button>
+        <button id="btn-show-rules-game" class="btn btn-icon-only btn-rules-game" title="Regras" aria-label="Regras">📖</button>
+      </div>
     </div>
 
     <!-- Players bar -->
@@ -207,6 +215,8 @@
   <!-- Socket.IO -->
   <script src="/socket.io/socket.io.js"></script>
   <!-- App scripts -->
+  <script src="/js/audio.js"></script>
+  <script src="/js/fx.js"></script>
   <script src="/js/rules.js"></script>
   <script src="/js/ui.js"></script>
   <script src="/js/socket.js"></script>

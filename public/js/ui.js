@@ -28,12 +28,44 @@ const UI = (() => {
     'Dama': 'D', 'Valete': 'V', 'Rei': 'R', '7': '7', 'Ás': 'A',
   };
 
+  let selectedAvatarId = 1;
+
+  function renderAvatarPicker() {
+    const grid = document.getElementById('avatar-picker-grid');
+    if (!grid) return;
+
+    grid.innerHTML = '';
+    for (let i = 1; i <= 10; i++) {
+      const item = document.createElement('div');
+      item.className = 'avatar-option' + (i === selectedAvatarId ? ' selected' : '');
+      item.setAttribute('role', 'button');
+      item.setAttribute('tabindex', '0');
+      item.setAttribute('aria-label', `Escolher Avatar ${i}`);
+
+      item.innerHTML = `<img src="/assets/avatars/${i}.svg" alt="Avatar ${i}">`;
+
+      item.addEventListener('click', () => {
+        selectedAvatarId = i;
+        document.querySelectorAll('.avatar-option').forEach((el, idx) => {
+          if (idx + 1 === i) el.classList.add('selected');
+          else el.classList.remove('selected');
+        });
+      });
+
+      grid.appendChild(item);
+    }
+  }
+
+  function getSelectedAvatarId() {
+    return selectedAvatarId;
+  }
+
   // =========================================================================
   // Card Rendering
   // =========================================================================
 
   function createCardElement(card, options = {}) {
-    const { clickable = false, onClick = null, disabled = false, cancelled = false, winner = false } = options;
+    const { clickable = false, onClick = null, disabled = false, cancelled = false, winner = false, avatarId = null } = options;
 
     const el = document.createElement('div');
     const colorClass = SUIT_COLORS[card.suit] || 'black';
@@ -46,6 +78,8 @@ const UI = (() => {
     const shortValue = VALUE_SHORT[card.value] || card.value;
     const suitSymbol = SUIT_SYMBOLS[card.suit] || card.suit;
 
+    const avatarOverlay = avatarId ? `<img src="/assets/avatars/${avatarId}.svg" class="card-avatar-badge" alt="Avatar">` : '';
+
     el.innerHTML = `
       <div class="card-corner card-corner-top">
         <span>${shortValue}</span>
@@ -53,6 +87,7 @@ const UI = (() => {
       </div>
       <span class="card-value">${shortValue}</span>
       <span class="card-suit">${suitSymbol}</span>
+      ${avatarOverlay}
       <div class="card-corner card-corner-bottom">
         <span>${shortValue}</span>
         <span class="corner-suit">${suitSymbol}</span>
@@ -81,6 +116,10 @@ const UI = (() => {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     const screen = document.getElementById(screenId);
     if (screen) screen.classList.add('active');
+
+    if (screenId === 'screen-home') {
+      renderAvatarPicker();
+    }
   }
 
   function showError(elementId, message) {
@@ -107,7 +146,10 @@ const UI = (() => {
     if (listEl) {
       listEl.innerHTML = state.players.map(p => `
         <li>
-          <span class="player-name">${escapeHtml(p.name)}</span>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <img src="/assets/avatars/${p.avatarId || 1}.svg" class="lobby-avatar-img" alt="Avatar">
+            <span class="player-name">${escapeHtml(p.name)}</span>
+          </div>
           ${p.isHost ? '<span class="player-badge">Anfitrião</span>' : ''}
         </li>
       `).join('');
@@ -162,7 +204,10 @@ const UI = (() => {
       }
 
       chip.innerHTML = `
-        <span class="player-chip-name">${escapeHtml(player.name)}</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <img src="/assets/avatars/${player.avatarId || 1}.svg" class="chip-avatar-img" alt="Avatar">
+          <span class="player-chip-name">${escapeHtml(player.name)}</span>
+        </div>
         <span class="player-chip-lives">${hearts}</span>
         ${player.eliminated ? '<span class="player-chip-eliminated">ELIMINADO</span>' : infoHtml}
       `;
@@ -481,6 +526,8 @@ const UI = (() => {
     const text = document.getElementById('trick-result-text');
     if (!overlay || !text) return;
 
+    if (typeof AudioFX !== 'undefined') AudioFX.playTrickWin();
+
     text.textContent = `${data.winnerName} ganha a vaza!`;
     overlay.classList.remove('hidden');
 
@@ -497,6 +544,8 @@ const UI = (() => {
     const overlay = document.getElementById('round-results-overlay');
     const table = document.getElementById('round-results-table');
     if (!overlay || !table) return;
+
+    if (typeof FX !== 'undefined') FX.launchConfetti(40);
 
     table.innerHTML = data.results.map(r => {
       const rowClass = r.bidCorrect ? 'correct' : 'wrong';
@@ -554,6 +603,9 @@ const UI = (() => {
   function showGameOver(data) {
     showScreen('screen-gameover');
 
+    if (typeof AudioFX !== 'undefined') AudioFX.playGameOver();
+    if (typeof FX !== 'undefined') FX.launchConfetti(120);
+
     const winnerEl = document.getElementById('gameover-winner');
     if (winnerEl && data.winner) {
       winnerEl.textContent = `🏆 ${data.winner.playerName}`;
@@ -600,5 +652,7 @@ const UI = (() => {
     createCardElement,
     createCardBackElement,
     escapeHtml,
+    renderAvatarPicker,
+    getSelectedAvatarId,
   };
 })();

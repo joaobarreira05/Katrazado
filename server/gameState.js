@@ -36,13 +36,13 @@ class Game {
    * @param {string} hostName - Display name of the host
    * @param {number} [initialLives=5] - Starting lives per player
    */
-  constructor(gameId, hostId, hostName, initialLives = engine.DEFAULT_LIVES) {
+  constructor(gameId, hostId, hostName, hostAvatarId = 1, initialLives = engine.DEFAULT_LIVES) {
     this.gameId = gameId;
     this.hostId = hostId;
     this.initialLives = initialLives;
 
     // Players
-    this.players = new Map(); // socketId → { id, name, connected }
+    this.players = new Map(); // socketId → { id, name, avatarId, connected }
     this.playerOrder = []; // Original order (never changes)
     this.activePlayers = []; // Currently alive players
     this.eliminatedPlayers = []; // Eliminated player IDs
@@ -85,14 +85,14 @@ class Game {
     this.gameState = GAME_STATES.LOBBY;
 
     // Add host as first player
-    this.addPlayer(hostId, hostName);
+    this.addPlayer(hostId, hostName, hostAvatarId);
   }
 
   // =========================================================================
   // Player Management
   // =========================================================================
 
-  addPlayer(socketId, name) {
+  addPlayer(socketId, name, avatarId = 1) {
     if (this.gameState !== GAME_STATES.LOBBY) {
       return { success: false, reason: 'O jogo já começou.' };
     }
@@ -110,7 +110,8 @@ class Game {
       }
     }
 
-    this.players.set(socketId, { id: socketId, name, connected: true });
+    const safeAvatar = (avatarId >= 1 && avatarId <= 10) ? avatarId : 1;
+    this.players.set(socketId, { id: socketId, name, avatarId: safeAvatar, connected: true });
     this.playerOrder.push(socketId);
 
     return { success: true };
@@ -151,12 +152,18 @@ class Game {
     return player ? player.name : 'Desconhecido';
   }
 
+  getPlayerAvatar(socketId) {
+    const player = this.players.get(socketId);
+    return player ? (player.avatarId || 1) : 1;
+  }
+
   getPlayerList() {
     return this.playerOrder.map(id => {
       const player = this.players.get(id);
       return {
         id,
         name: player.name,
+        avatarId: player.avatarId || 1,
         connected: player.connected,
         isHost: id === this.hostId,
         lives: this.lives[id] ?? this.initialLives,

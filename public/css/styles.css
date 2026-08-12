@@ -1436,18 +1436,113 @@ body {
   }
 }
 
-@media (min-width: 1024px) {
-  .game-center {
-    min-height: 300px;
-  }
+/* ---------------------------------------------------------------------------
+   Avatar Picker & Avatars Styling
+   --------------------------------------------------------------------------- */
+.avatar-picker-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-sm);
+}
 
-  .hand-cards .card {
-    width: 90px;
-    height: 130px;
-  }
+.avatar-picker-group label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
 
-  .trick-area .card {
-    width: 70px;
-    height: 100px;
-  }
+.avatar-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-sm);
+  padding: 8px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(8px);
+}
+
+.avatar-option {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.avatar-option img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-option:hover {
+  transform: scale(1.15);
+  border-color: var(--accent-gold-dark);
+}
+
+.avatar-option.selected {
+  border-color: var(--accent-gold);
+  box-shadow: 0 0 12px rgba(240, 192, 64, 0.6);
+  transform: scale(1.15);
+}
+
+.lobby-avatar-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--accent-gold);
+  object-fit: cover;
+}
+
+.chip-avatar-img {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--accent-gold);
+  object-fit: cover;
+}
+
+.card-avatar-badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--accent-gold);
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  object-fit: cover;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+
+.top-bar-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+/* 3D Card Hover Effect */
+.card {
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+.hand-cards .card:hover:not(.disabled) {
+  transform: translateY(-12px) rotateX(8deg) scale(1.05);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5), 0 0 15px rgba(240, 192, 64, 0.3);
+}
+
+/* Accessibility Focus Rings */
+:focus-visible {
+  outline: 3px solid var(--accent-gold) !important;
+  outline-offset: 2px !important;
 }
