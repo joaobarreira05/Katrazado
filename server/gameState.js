@@ -264,6 +264,7 @@ class Game {
     // Set up bidding order (same as play order)
     this.currentBidderIndex = 0;
     this.currentPlayer = this.trickPlayOrder[0];
+    this.turnStartTime = Date.now();
 
     return {
       // Each player gets their own hand sent privately
@@ -352,6 +353,7 @@ class Game {
 
     // More bidders remaining
     this.currentPlayer = this.trickPlayOrder[this.currentBidderIndex];
+    this.turnStartTime = Date.now();
 
     return {
       success: true,
@@ -373,6 +375,7 @@ class Game {
     this.trickLeader = this.trickPlayOrder[0]; // First player leads first trick
     this.currentTrickPlayerIndex = 0;
     this.currentPlayer = this.trickLeader;
+    this.turnStartTime = Date.now();
   }
 
   /**
@@ -441,6 +444,7 @@ class Game {
     );
     const currentIdx = trickOrder.indexOf(playerId);
     this.currentPlayer = trickOrder[currentIdx + 1];
+    this.turnStartTime = Date.now();
 
     return {
       success: true,
@@ -484,6 +488,7 @@ class Game {
     this.currentTrick = [];
     this.trickLeader = this.startingPlayer;
     this.currentPlayer = this.startingPlayer;
+    this.turnStartTime = Date.now();
 
     trickResult.roundComplete = false;
     return trickResult;
@@ -633,6 +638,8 @@ class Game {
       isMyTurn: playerId === this.currentPlayer,
       myId: playerId,
       myName: this.getPlayerName(playerId),
+      turnStartTime: this.turnStartTime || Date.now(),
+      turnDuration: 12, // 12 seconds per turn
     };
 
     // Add player-specific data

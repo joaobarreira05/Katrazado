@@ -362,8 +362,7 @@
   function handlePlaceBid(bid) {
     SocketClient.emit('place-bid', { bid }, (response) => {
       if (!response.success) {
-        // Show error briefly
-        alert(response.reason || 'Previsão inválida.');
+        console.warn('[App] Bid failed:', response.reason);
       }
     });
   }
@@ -371,7 +370,7 @@
   function handlePlayCard(card) {
     SocketClient.emit('play-card', { card }, (response) => {
       if (!response.success) {
-        alert(response.reason || 'Jogada inválida.');
+        console.warn('[App] Play card failed:', response.reason);
       }
     });
   }

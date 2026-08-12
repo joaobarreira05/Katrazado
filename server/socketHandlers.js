@@ -33,11 +33,120 @@ function getGame(socketId) {
   return games.get(gameId) || null;
 }
 
+const turnTimers = new Map();
+
+function clearTurnTimer(gameId) {
+  if (turnTimers.has(gameId)) {
+    clearTimeout(turnTimers.get(gameId));
+    turnTimers.delete(gameId);
+  }
+}
+
+function scheduleTurnTimer(io, game) {
+  clearTurnTimer(game.gameId);
+
+  if (game.gameState !== GAME_STATES.BIDDING && game.gameState !== GAME_STATES.TRICK_PLAY) {
+    return;
+  }
+
+  const activePlayer = game.currentPlayer;
+  if (!activePlayer) return;
+
+  const timer = setTimeout(() => {
+    console.log(`[Katrazado] 12s timer expired for ${game.getPlayerName(activePlayer)} in ${game.gameState}`);
+    handleTimeoutAction(io, game, activePlayer);
+  }, 12000);
+
+  turnTimers.set(game.gameId, timer);
+}
+
+function handleTimeoutAction(io, game, playerId) {
+  if (game.currentPlayer !== playerId) return;
+
+  const engine = require('./gameEngine');
+
+  if (game.gameState === GAME_STATES.BIDDING) {
+    const isLastBidder = game.currentBidderIndex === game.trickPlayOrder.length - 1;
+    let autoBid = 0;
+    const forbidden = isLastBidder ? engine.getForbiddenBid(game.cardsPerPlayer, game.bidOrder) : null;
+    if (forbidden === 0) autoBid = 1;
+
+    const result = game.placeBid(playerId, autoBid);
+    if (result.success) {
+      broadcastToGame(io, game, 'bid-placed', {
+        playerId,
+        playerName: game.getPlayerName(playerId),
+        bid: autoBid,
+        wasBlind: result.wasBlind,
+        auto: true,
+      });
+      if (result.wasBlind && result.hand) {
+        io.to(playerId).emit('cards-revealed', { hand: result.hand });
+      }
+      broadcastGameState(io, game);
+      if (result.biddingComplete) {
+        broadcastToGame(io, game, 'bidding-complete', {
+          bids: Object.entries(game.bids).map(([id, b]) => ({
+            playerId: id,
+            playerName: game.getPlayerName(id),
+            bid: b,
+          })),
+        });
+      }
+    }
+  } else if (game.gameState === GAME_STATES.TRICK_PLAY) {
+    const hand = game.hands[playerId];
+    if (hand && hand.length > 0) {
+      const autoCard = hand[0];
+      const result = game.playCard(playerId, autoCard);
+      if (result.success) {
+        broadcastToGame(io, game, 'card-played', {
+          playerId,
+          playerName: game.getPlayerName(playerId),
+          card: autoCard,
+          auto: true,
+        });
+
+        if (result.trickComplete) {
+          broadcastToGame(io, game, 'trick-resolved', {
+            trickNumber: result.trickNumber,
+            cardsPlayed: result.cardsPlayed,
+            winnerId: result.winnerId,
+            winnerName: result.winnerName,
+            winningCard: result.winningCard,
+          });
+
+          if (result.roundComplete) {
+            setTimeout(() => {
+              const roundResults = game.evaluateRound();
+              broadcastToGame(io, game, 'round-results', roundResults);
+              broadcastGameState(io, game);
+
+              setTimeout(() => {
+                advanceGameFlow(io, game);
+              }, 3000);
+            }, 2000);
+          } else {
+            setTimeout(() => {
+              broadcastGameState(io, game);
+            }, 1500);
+          }
+        } else {
+          broadcastGameState(io, game);
+        }
+
+        io.to(playerId).emit('hand-updated', { hand: game.hands[playerId] });
+      }
+    }
+  }
+}
+
 function broadcastGameState(io, game) {
   for (const [playerId] of game.players) {
     const state = game.getStateForPlayer(playerId);
     io.to(playerId).emit('game-state', state);
   }
+  scheduleTurnTimer(io, game);
 }
 
 function broadcastToGame(io, game, event, data) {
