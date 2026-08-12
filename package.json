@@ -1,0 +1,17 @@
+{
+  "name": "katrazado",
+  "version": "1.0.0",
+  "description": "Katrazado — Multiplayer trick-prediction card game",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node --test server/__tests__/*.test.js"
+  },
+  "keywords": ["card-game", "multiplayer", "katrazado"],
+  "license": "MIT",
+  "dependencies": {
+    "express": "^5.1.0",
+    "socket.io": "^4.8.0"
+  }
+}

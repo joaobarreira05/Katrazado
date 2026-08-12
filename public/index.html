@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Katrazado — Jogo de cartas multiplayer de previsão de vazas para 3 a 8 jogadores.">
+  <meta name="theme-color" content="#0a1628">
+  <title>Katrazado — Jogo de Cartas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+
+  <!-- ===== SCREEN: HOME ===== -->
+  <div id="screen-home" class="screen active">
+    <div class="home-container">
+      <div class="logo-area">
+        <div class="logo-icon">🃏</div>
+        <h1 class="logo-title">KATRAZADO</h1>
+        <p class="logo-subtitle">Jogo de Cartas Multiplayer</p>
+      </div>
+
+      <div class="home-actions">
+        <div class="input-group">
+          <label for="player-name-input">O teu nome</label>
+          <input type="text" id="player-name-input" placeholder="Escreve o teu nome..." maxlength="15" autocomplete="off">
+        </div>
+
+        <button id="btn-create-game" class="btn btn-primary btn-large">
+          <span class="btn-icon">✦</span>
+          Criar Sala
+        </button>
+
+        <div class="divider"><span>ou</span></div>
+
+        <div class="input-group">
+          <label for="game-code-input">Código da sala</label>
+          <input type="text" id="game-code-input" placeholder="Ex: AB3X7" maxlength="5" autocomplete="off" style="text-transform: uppercase;">
+        </div>
+
+        <button id="btn-join-game" class="btn btn-secondary btn-large">
+          <span class="btn-icon">→</span>
+          Entrar na Sala
+        </button>
+      </div>
+
+      <button id="btn-show-rules" class="btn btn-ghost btn-rules">
+        <span class="btn-icon">📖</span>
+        Regras do Jogo
+      </button>
+
+      <div id="home-error" class="error-message hidden"></div>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN: LOBBY ===== -->
+  <div id="screen-lobby" class="screen">
+    <div class="lobby-container">
+      <div class="lobby-header">
+        <h2>Sala de Espera</h2>
+        <div class="game-code-display">
+          <span class="code-label">Código:</span>
+          <span id="lobby-game-code" class="code-value">-----</span>
+          <button id="btn-copy-code" class="btn btn-icon-only" title="Copiar código">📋</button>
+        </div>
+      </div>
+
+      <div class="players-list-container">
+        <h3>Jogadores <span id="player-count-lobby">(0/8)</span></h3>
+        <ul id="players-list-lobby" class="players-list"></ul>
+      </div>
+
+      <div class="lobby-settings">
+        <div class="input-group input-group-inline">
+          <label for="lives-input">Vidas iniciais:</label>
+          <input type="number" id="lives-input" value="5" min="1" max="10" class="input-small">
+        </div>
+      </div>
+
+      <div class="lobby-actions">
+        <button id="btn-start-game" class="btn btn-primary btn-large" disabled>
+          <span class="btn-icon">▶</span>
+          Iniciar Jogo
+        </button>
+        <button id="btn-leave-lobby" class="btn btn-ghost">Sair da Sala</button>
+      </div>
+
+      <div id="lobby-error" class="error-message hidden"></div>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN: GAME ===== -->
+  <div id="screen-game" class="screen">
+    <!-- Top Bar: Round info -->
+    <div class="game-top-bar">
+      <div class="round-info">
+        <span class="round-label">Ronda</span>
+        <span id="round-number" class="round-number">1</span>
+      </div>
+      <div class="cards-info">
+        <span id="cards-per-player" class="cards-count">1</span>
+        <span class="cards-label">carta(s)</span>
+      </div>
+      <button id="btn-show-rules-game" class="btn btn-icon-only btn-rules-game" title="Regras">📖</button>
+    </div>
+
+    <!-- Players bar -->
+    <div id="players-bar" class="players-bar"></div>
+
+    <!-- Current turn indicator -->
+    <div id="turn-indicator" class="turn-indicator hidden">
+      <span class="turn-label">Vez de:</span>
+      <span id="turn-player-name" class="turn-player-name">---</span>
+    </div>
+
+    <!-- Blind bid warning -->
+    <div id="blind-bid-warning" class="blind-warning hidden">
+      <div class="blind-icon">⚠️</div>
+      <div class="blind-text">
+        <strong>ÀS CEGAS</strong>
+        <p>Fazes a tua previsão ANTES de veres as cartas.</p>
+      </div>
+    </div>
+
+    <!-- Game center area -->
+    <div id="game-center" class="game-center">
+      <!-- Trick area: cards on table -->
+      <div id="trick-area" class="trick-area"></div>
+
+      <!-- Bidding area -->
+      <div id="bidding-area" class="bidding-area hidden">
+        <h3 class="bidding-title">Quantas vazas vais ganhar?</h3>
+        <div id="bid-buttons" class="bid-buttons"></div>
+        <div id="bid-forbidden" class="bid-forbidden hidden"></div>
+      </div>
+
+      <!-- Trick result overlay -->
+      <div id="trick-result" class="trick-result hidden">
+        <div class="trick-result-content">
+          <span class="trick-result-icon">🏆</span>
+          <span id="trick-result-text" class="trick-result-text">---</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Player's hand -->
+    <div id="hand-area" class="hand-area">
+      <div id="hand-cards" class="hand-cards"></div>
+    </div>
+
+    <!-- Round Results Overlay -->
+    <div id="round-results-overlay" class="overlay hidden">
+      <div class="overlay-content results-content">
+        <h2>Resultados da Ronda</h2>
+        <div id="round-results-table" class="results-table"></div>
+        <p class="results-note">A próxima ronda começa em breve...</p>
+      </div>
+    </div>
+
+    <!-- Elimination Overlay -->
+    <div id="elimination-overlay" class="overlay hidden">
+      <div class="overlay-content elimination-content">
+        <h2>💀 Eliminação</h2>
+        <div id="elimination-details"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN: GAME OVER ===== -->
+  <div id="screen-gameover" class="screen">
+    <div class="gameover-container">
+      <div class="gameover-crown">👑</div>
+      <h1 class="gameover-title">Fim do Jogo!</h1>
+      <div id="gameover-winner" class="gameover-winner"></div>
+      <div id="gameover-stats" class="gameover-stats"></div>
+      <button id="btn-back-home" class="btn btn-primary btn-large">
+        <span class="btn-icon">🏠</span>
+        Voltar ao Início
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN: RULES ===== -->
+  <div id="screen-rules" class="screen">
+    <div class="rules-container">
+      <div class="rules-header">
+        <button id="btn-close-rules" class="btn btn-icon-only btn-close">✕</button>
+        <h1>📖 Regras do Katrazado</h1>
+      </div>
+      <div class="rules-content" id="rules-content"></div>
+    </div>
+  </div>
+
+  <!-- Socket.IO -->
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- App scripts -->
+  <script src="/js/rules.js"></script>
+  <script src="/js/ui.js"></script>
+  <script src="/js/socket.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
