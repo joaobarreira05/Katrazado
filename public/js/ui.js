@@ -422,15 +422,39 @@ const UI = (() => {
     trickArea.innerHTML = '';
 
     if (state.currentTrick && state.currentTrick.length > 0) {
-      state.currentTrick.forEach(play => {
+      const n = state.currentTrick.length;
+      const cancelled = new Array(n).fill(false);
+
+      // Identify cancelled card pairs (1st-2nd, 3rd-4th of same value)
+      for (let i = 0; i < n; i++) {
+        const val = state.currentTrick[i].card.value;
+        for (let j = 0; j < i; j++) {
+          if (!cancelled[j] && state.currentTrick[j].card.value === val) {
+            cancelled[j] = true;
+            cancelled[i] = true;
+            break;
+          }
+        }
+      }
+
+      state.currentTrick.forEach((play, index) => {
+        const isCancelled = cancelled[index];
+
         const wrapper = document.createElement('div');
-        wrapper.className = 'trick-card-wrapper';
+        wrapper.className = 'trick-card-wrapper' + (isCancelled ? ' trick-card-cancelled' : '');
+
+        if (isCancelled) {
+          const cutBadge = document.createElement('span');
+          cutBadge.className = 'cut-badge';
+          cutBadge.textContent = '✂️ CORTE';
+          wrapper.appendChild(cutBadge);
+        }
 
         const nameLabel = document.createElement('span');
         nameLabel.className = 'trick-card-player';
         nameLabel.textContent = play.playerName;
 
-        const cardEl = createCardElement(play.card);
+        const cardEl = createCardElement(play.card, { cancelled: isCancelled });
 
         wrapper.appendChild(nameLabel);
         wrapper.appendChild(cardEl);

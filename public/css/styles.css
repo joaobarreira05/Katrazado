@@ -992,11 +992,46 @@ body {
   font-size: 1.1rem;
 }
 
-/* Cancelled card */
+/* Cancelled card (Pair Cut) */
 .card.cancelled {
-  opacity: 0.3;
-  filter: grayscale(0.8);
-  transform: rotate(5deg);
+  opacity: 0.55;
+  filter: brightness(0.45) grayscale(0.8);
+  transform: scale(0.95) rotate(4deg);
+  border: 2px solid var(--accent-red) !important;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8), 0 4px 12px rgba(0, 0, 0, 0.6);
+  position: relative;
+  transition: all var(--transition-fast);
+}
+
+.card.cancelled::after {
+  content: '✂️';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  background: rgba(10, 22, 40, 0.55);
+  border-radius: var(--radius-card);
+  animation: popCut 0.3s ease;
+}
+
+@keyframes popCut {
+  from { transform: scale(0.3) rotate(-20deg); opacity: 0; }
+  to { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+.cut-badge {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #ffffff;
+  background: var(--accent-red);
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  animation: popCut 0.3s ease;
+  margin-bottom: 2px;
 }
 
 /* Winning card highlight */
