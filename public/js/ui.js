@@ -171,6 +171,66 @@ const UI = (() => {
     }
   }
 
+  let timerInterval = null;
+
+  function updateTurnBanner(state) {
+    const banner = document.getElementById('turn-banner');
+    const textEl = document.getElementById('turn-banner-text');
+    const timerSecs = document.getElementById('timer-seconds');
+    const timerBox = document.getElementById('turn-timer');
+    const fillEl = document.getElementById('turn-progress-fill');
+
+    if (!banner || !textEl) return;
+
+    if (state.gameState !== 'BIDDING' && state.gameState !== 'TRICK_PLAY') {
+      banner.classList.add('hidden');
+      if (timerInterval) clearInterval(timerInterval);
+      return;
+    }
+
+    banner.classList.remove('hidden');
+
+    const actionText = state.gameState === 'BIDDING' ? 'DECLARAR' : 'JOGAR';
+
+    if (state.isMyTurn) {
+      banner.className = 'turn-banner my-turn';
+      textEl.textContent = `✨ É A TUA VEZ DE ${actionText}!`;
+    } else {
+      banner.className = 'turn-banner other-turn';
+      textEl.textContent = `A aguardar por ${escapeHtml(state.currentPlayerName || '---')}...`;
+    }
+
+    if (timerInterval) clearInterval(timerInterval);
+
+    const startTime = state.turnStartTime || Date.now();
+    const durationSecs = state.turnDuration || 12;
+
+    function tick() {
+      const elapsed = (Date.now() - startTime) / 1000;
+      const remaining = Math.max(0, Math.ceil(durationSecs - elapsed));
+
+      if (timerSecs) timerSecs.textContent = remaining;
+
+      const pct = Math.max(0, Math.min(100, ((durationSecs - elapsed) / durationSecs) * 100));
+      if (fillEl) fillEl.style.width = `${pct}%`;
+
+      if (timerBox) {
+        if (remaining <= 4) {
+          timerBox.classList.add('warning');
+        } else {
+          timerBox.classList.remove('warning');
+        }
+      }
+
+      if (remaining <= 0 && timerInterval) {
+        clearInterval(timerInterval);
+      }
+    }
+
+    tick();
+    timerInterval = setInterval(tick, 200);
+  }
+
   // =========================================================================
   // Game State Rendering
   // =========================================================================
@@ -195,64 +255,9 @@ const UI = (() => {
         const label = state.gameState === 'BIDDING' ? 'Declara:' : 'Joga:';
         document.querySelector('.turn-label').textContent = label;
         turnName.textContent = state.currentPlayerName || '---';
-    let timerInterval = null;
-
-    function updateTurnBanner(state) {
-      const banner = document.getElementById('turn-banner');
-      const textEl = document.getElementById('turn-banner-text');
-      const timerSecs = document.getElementById('timer-seconds');
-      const timerBox = document.getElementById('turn-timer');
-      const fillEl = document.getElementById('turn-progress-fill');
-
-      if (!banner || !textEl) return;
-
-      if (state.gameState !== 'BIDDING' && state.gameState !== 'TRICK_PLAY') {
-        banner.classList.add('hidden');
-        if (timerInterval) clearInterval(timerInterval);
-        return;
-      }
-
-      banner.classList.remove('hidden');
-
-      const actionText = state.gameState === 'BIDDING' ? 'DECLARAR' : 'JOGAR';
-
-      if (state.isMyTurn) {
-        banner.className = 'turn-banner my-turn';
-        textEl.textContent = `✨ É A TUA VEZ DE ${actionText}!`;
       } else {
-        banner.className = 'turn-banner other-turn';
-        textEl.textContent = `A aguardar por ${escapeHtml(state.currentPlayerName || '---')}...`;
+        turnIndicator.classList.add('hidden');
       }
-
-      if (timerInterval) clearInterval(timerInterval);
-
-      const startTime = state.turnStartTime || Date.now();
-      const durationSecs = state.turnDuration || 12;
-
-      function tick() {
-        const elapsed = (Date.now() - startTime) / 1000;
-        const remaining = Math.max(0, Math.ceil(durationSecs - elapsed));
-
-        if (timerSecs) timerSecs.textContent = remaining;
-
-        const pct = Math.max(0, Math.min(100, ((durationSecs - elapsed) / durationSecs) * 100));
-        if (fillEl) fillEl.style.width = `${pct}%`;
-
-        if (timerBox) {
-          if (remaining <= 4) {
-            timerBox.classList.add('warning');
-          } else {
-            timerBox.classList.remove('warning');
-          }
-        }
-
-        if (remaining <= 0 && timerInterval) {
-          clearInterval(timerInterval);
-        }
-      }
-
-      tick();
-      timerInterval = setInterval(tick, 200);
     }
 
     // Blind bid warning
