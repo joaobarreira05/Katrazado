@@ -1455,19 +1455,22 @@ body {
 }
 
 .avatar-picker-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: var(--space-sm);
-  padding: 8px;
+  display: flex;
+  gap: 10px;
+  padding: 10px;
   background: var(--bg-glass);
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-lg);
   backdrop-filter: blur(8px);
+  overflow-x: auto;
+  scrollbar-width: thin;
+  max-width: 100%;
 }
 
 .avatar-option {
-  width: 44px;
-  height: 44px;
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   border: 2px solid transparent;
   cursor: pointer;

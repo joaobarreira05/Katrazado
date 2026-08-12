@@ -41,14 +41,24 @@ const UI = (() => {
     '/assets/avatars/7.png',
     '/assets/avatars/7_1.png',
     '/assets/avatars/6.png',
+    '/assets/avatars/6_1.png',
+    '/assets/avatars/5.png',
+    '/assets/avatars/5_1.png',
+    '/assets/avatars/4.png',
+    '/assets/avatars/4_1.png',
+    '/assets/avatars/3.png',
+    '/assets/avatars/3_1.png',
+    '/assets/avatars/2.png',
+    '/assets/avatars/2_1.png',
   ];
 
   function getAvatarSrc(id) {
-    if (typeof id === 'number' && id >= 1 && id <= 10) {
+    if (typeof id === 'number' && id >= 1 && id <= PLAYER_AVATAR_FILES.length) {
       return PLAYER_AVATAR_FILES[id - 1];
     }
     if (typeof id === 'string' && id.length > 0) {
-      return id;
+      if (id.startsWith('/')) return id;
+      return `/assets/avatars/${id}`;
     }
     return PLAYER_AVATAR_FILES[0];
   }
@@ -78,26 +88,26 @@ const UI = (() => {
     if (!grid) return;
 
     grid.innerHTML = '';
-    for (let i = 1; i <= 10; i++) {
+    PLAYER_AVATAR_FILES.forEach((src, idx) => {
+      const avatarNum = idx + 1;
       const item = document.createElement('div');
-      item.className = 'avatar-option' + (i === selectedAvatarId ? ' selected' : '');
+      item.className = 'avatar-option' + (avatarNum === selectedAvatarId ? ' selected' : '');
       item.setAttribute('role', 'button');
       item.setAttribute('tabindex', '0');
-      item.setAttribute('aria-label', `Escolher Avatar ${i}`);
+      item.setAttribute('aria-label', `Escolher Foto ${avatarNum}`);
 
-      const src = getAvatarSrc(i);
-      item.innerHTML = `<img src="${src}" alt="Avatar ${i}" onerror="this.src='/assets/avatars/${i}.svg'">`;
+      item.innerHTML = `<img src="${src}" alt="Foto ${avatarNum}" onerror="this.src='/assets/avatars/${avatarNum}.svg'">`;
 
       item.addEventListener('click', () => {
-        selectedAvatarId = i;
-        document.querySelectorAll('.avatar-option').forEach((el, idx) => {
-          if (idx + 1 === i) el.classList.add('selected');
+        selectedAvatarId = avatarNum;
+        document.querySelectorAll('.avatar-option').forEach((el, elIdx) => {
+          if (elIdx + 1 === avatarNum) el.classList.add('selected');
           else el.classList.remove('selected');
         });
       });
 
       grid.appendChild(item);
-    }
+    });
   }
 
   function getSelectedAvatarId() {
