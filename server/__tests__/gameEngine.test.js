@@ -636,26 +636,26 @@ describe('Round Evaluation', () => {
     assert.ok(results.B.bidCorrect);
   });
 
-  it('wrong prediction → 1 life lost', () => {
+  it('wrong prediction → lives lost equals absolute difference between bid and tricks', () => {
     const results = evaluateRound(
       { A: 2, B: 1 },
       { A: 0, B: 3 },
       ['A', 'B']
     );
-    assert.equal(results.A.livesLost, 1);
-    assert.equal(results.B.livesLost, 1);
+    assert.equal(results.A.livesLost, 2); // |2 - 0| = 2
+    assert.equal(results.B.livesLost, 2); // |1 - 3| = 2
     assert.ok(!results.A.bidCorrect);
     assert.ok(!results.B.bidCorrect);
   });
 
-  it('magnitude of error does not matter (always 1 life)', () => {
+  it('magnitude of error determines lives lost', () => {
     const results = evaluateRound(
       { A: 5, B: 0 },
       { A: 0, B: 5 },
       ['A', 'B']
     );
-    assert.equal(results.A.livesLost, 1);
-    assert.equal(results.B.livesLost, 1);
+    assert.equal(results.A.livesLost, 5); // |5 - 0| = 5
+    assert.equal(results.B.livesLost, 5); // |0 - 5| = 5
   });
 
   it('mixed results', () => {
@@ -665,8 +665,8 @@ describe('Round Evaluation', () => {
       ['A', 'B', 'C']
     );
     assert.equal(results.A.livesLost, 0); // correct
-    assert.equal(results.B.livesLost, 1); // wrong
-    assert.equal(results.C.livesLost, 1); // wrong
+    assert.equal(results.B.livesLost, 1); // |1 - 0| = 1
+    assert.equal(results.C.livesLost, 1); // |0 - 1| = 1
   });
 
   it('0 tricks won defaults correctly', () => {

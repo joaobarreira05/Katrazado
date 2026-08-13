@@ -387,12 +387,13 @@ function evaluateRound(bids, tricksWon, activePlayers) {
     const bid = bids[playerId];
     const tricks = tricksWon[playerId] || 0;
     const correct = bid === tricks;
+    const diff = Math.abs(bid - tricks);
 
     results[playerId] = {
       bid,
       tricksWon: tricks,
       bidCorrect: correct,
-      livesLost: correct ? 0 : 1,
+      livesLost: correct ? 0 : diff,
     };
   }
 

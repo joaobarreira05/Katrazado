@@ -523,9 +523,19 @@ class Game {
 
     const results = engine.evaluateRound(this.bids, this.tricksWon, this.activePlayers);
 
-    // Apply life changes
+    // Apply life changes with 1-life minimum safety net rule:
+    // A player MUST play at least one round with 1 life (blind bid) before elimination!
+    // If a player started the round with > 1 life and would drop to <= 0, clamp to 1 life.
     for (const playerId of this.activePlayers) {
-      this.lives[playerId] -= results[playerId].livesLost;
+      const startingLives = this.lives[playerId];
+      const lost = results[playerId].livesLost;
+      let newLives = startingLives - lost;
+
+      if (startingLives > 1 && newLives <= 0) {
+        newLives = 1;
+      }
+
+      this.lives[playerId] = Math.max(0, newLives);
     }
 
     // Build round summary

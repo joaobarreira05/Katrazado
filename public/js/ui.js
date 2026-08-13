@@ -623,7 +623,7 @@ const UI = (() => {
           <div class="result-details">
             <div class="result-bid-info">
               <span>Previsão: ${r.bid} | Vazas: ${r.tricksWon}</span>
-              <span class="result-lives">${r.bidCorrect ? 'Mantém vidas' : '-1 vida'} → ${'❤️'.repeat(Math.max(0, r.livesRemaining))}</span>
+              <span class="result-lives">${r.bidCorrect ? 'Mantém vidas' : `-${r.livesLost} ${r.livesLost === 1 ? 'vida' : 'vidas'}`} → ${'❤️'.repeat(Math.max(0, r.livesRemaining))}</span>
             </div>
           </div>
         </div>
