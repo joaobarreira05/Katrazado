@@ -53,6 +53,11 @@
       renderRulesContent();
     }
 
+    // Render avatar picker on initial load
+    if (typeof UI !== 'undefined' && UI.renderAvatarPicker) {
+      UI.renderAvatarPicker();
+    }
+
     // Expose card play callback
     window.onCardPlayed = handlePlayCard;
     window.onBidPlaced = handlePlaceBid;
