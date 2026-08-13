@@ -930,11 +930,11 @@ body {
    PLAYING CARDS
    --------------------------------------------------------------------------- */
 .card {
-  width: 60px;
-  height: 88px;
+  width: 80px;
+  height: 115px;
   border-radius: var(--radius-card);
   background: var(--card-bg);
-  border: 1px solid var(--card-border);
+  border: 1.5px solid var(--card-border);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -956,20 +956,20 @@ body {
 }
 
 .card-value {
-  font-size: 1.1rem;
+  font-size: 1.5rem;
   font-weight: 800;
   line-height: 1;
 }
 
 .card-suit {
-  font-size: 1.3rem;
+  font-size: 1.8rem;
   line-height: 1;
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
 .card-corner {
   position: absolute;
-  font-size: 0.55rem;
+  font-size: 0.7rem;
   font-weight: 700;
   line-height: 1;
   display: flex;
@@ -978,32 +978,32 @@ body {
 }
 
 .card-corner-top {
-  top: 3px;
-  left: 4px;
+  top: 4px;
+  left: 5px;
 }
 
 .card-corner-bottom {
-  bottom: 3px;
-  right: 4px;
+  bottom: 4px;
+  right: 5px;
   transform: rotate(180deg);
 }
 
 .card-corner .corner-suit {
-  font-size: 0.6rem;
+  font-size: 0.75rem;
 }
 
-/* Card in trick area (slightly larger) */
+/* Card in trick area */
 .trick-area .card {
-  width: 54px;
-  height: 78px;
+  width: 75px;
+  height: 108px;
 }
 
 .trick-area .card .card-value {
-  font-size: 1rem;
+  font-size: 1.4rem;
 }
 
 .trick-area .card .card-suit {
-  font-size: 1.1rem;
+  font-size: 1.6rem;
 }
 
 /* Cancelled card (Pair Cut) */
@@ -1086,16 +1086,16 @@ body {
 
 .hand-cards .card {
   cursor: pointer;
-  width: 68px;
-  height: 98px;
+  width: 90px;
+  height: 130px;
 }
 
 .hand-cards .card .card-value {
-  font-size: 1.2rem;
+  font-size: 1.6rem;
 }
 
 .hand-cards .card .card-suit {
-  font-size: 1.4rem;
+  font-size: 1.9rem;
 }
 
 .hand-cards .card:hover {
@@ -1426,21 +1426,21 @@ body {
   }
 
   .card {
-    width: 70px;
-    height: 100px;
+    width: 90px;
+    height: 130px;
   }
 
   .hand-cards .card {
-    width: 80px;
-    height: 115px;
+    width: 100px;
+    height: 145px;
   }
 
   .hand-cards .card .card-value {
-    font-size: 1.4rem;
+    font-size: 1.8rem;
   }
 
   .hand-cards .card .card-suit {
-    font-size: 1.6rem;
+    font-size: 2.1rem;
   }
 
   .bid-btn {
