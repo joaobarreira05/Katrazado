@@ -32,6 +32,7 @@ const UI = (() => {
 
   const PLAYER_AVATAR_FILES = [
     '/assets/avatars/As.png',
+    '/assets/avatars/novo.png',
     '/assets/avatars/r.png',
     '/assets/avatars/r_1.png',
     '/assets/avatars/v.png',
