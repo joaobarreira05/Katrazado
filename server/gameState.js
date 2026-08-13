@@ -110,7 +110,7 @@ class Game {
       }
     }
 
-    const safeAvatar = (avatarId >= 1 && avatarId <= 10) ? avatarId : 1;
+    const safeAvatar = (avatarId >= 1 && avatarId <= 19) ? avatarId : 1;
     this.players.set(socketId, { id: socketId, name, avatarId: safeAvatar, connected: true });
     this.playerOrder.push(socketId);
 
