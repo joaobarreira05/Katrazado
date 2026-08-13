@@ -117,7 +117,11 @@ function handleTimeoutAction(io, game, playerId) {
           });
 
           if (result.roundComplete) {
+            // Immediately broadcast state showing the completed trick cards
+            broadcastGameState(io, game);
+
             setTimeout(() => {
+              game.lastCompletedTrick = null;
               const roundResults = game.evaluateRound();
               broadcastToGame(io, game, 'round-results', roundResults);
               broadcastGameState(io, game);
@@ -127,7 +131,11 @@ function handleTimeoutAction(io, game, playerId) {
               }, 3000);
             }, 5000);
           } else {
+            // Immediately broadcast state showing the completed trick cards
+            broadcastGameState(io, game);
+
             setTimeout(() => {
+              game.lastCompletedTrick = null;
               broadcastGameState(io, game);
             }, 5000);
           }
@@ -402,8 +410,12 @@ function registerSocketHandlers(io) {
         });
 
         if (result.roundComplete) {
-          // Evaluate round and show results
+          // Immediately broadcast state showing the completed trick cards
+          broadcastGameState(io, game);
+
+          // Evaluate round and show results after 5s pause
           setTimeout(() => {
+            game.lastCompletedTrick = null;
             const roundResults = game.evaluateRound();
             broadcastToGame(io, game, 'round-results', roundResults);
             broadcastGameState(io, game);
@@ -414,8 +426,12 @@ function registerSocketHandlers(io) {
             }, 3000);
           }, 5000);
         } else {
-          // More tricks to play — update state after 5 seconds so players can see all cards
+          // Immediately broadcast state showing the completed trick cards
+          broadcastGameState(io, game);
+
+          // After 5 seconds, clear the completed trick display and show clean new trick
           setTimeout(() => {
+            game.lastCompletedTrick = null;
             broadcastGameState(io, game);
           }, 5000);
         }

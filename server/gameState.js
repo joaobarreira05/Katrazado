@@ -72,6 +72,7 @@ class Game {
     // Tricks
     this.tricksWon = {}; // playerId → trick count this round
     this.currentTrick = []; // [{playerId, card}]
+    this.lastCompletedTrick = null; // holds cards of last completed trick for 5s display
     this.currentTrickNumber = 0;
     this.trickLeader = null; // Who leads the current trick
     this.currentTrickPlayerIndex = 0;
@@ -485,10 +486,22 @@ class Game {
 
     // Check if all tricks for this round are done
     if (this.currentTrickNumber >= this.cardsPerPlayer) {
-      // Round is over
+      // Round is over — keep currentTrick visible for the pause
       trickResult.roundComplete = true;
+      this.lastCompletedTrick = this.currentTrick.map(c => ({
+        playerId: c.playerId,
+        playerName: this.getPlayerName(c.playerId),
+        card: c.card,
+      }));
       return trickResult;
     }
+
+    // Save the completed trick for display during the 5s pause
+    this.lastCompletedTrick = this.currentTrick.map(c => ({
+      playerId: c.playerId,
+      playerName: this.getPlayerName(c.playerId),
+      card: c.card,
+    }));
 
     // Start next trick — in Katrazado, startingPlayer always leads every trick in the round
     this.currentTrickNumber++;
@@ -670,9 +683,15 @@ class Game {
     }
 
     // Current trick cards on table (public)
-    state.currentTrick = this.currentTrick.map(c => ({
+    // If currentTrick is empty but we have a recently completed trick, show that instead
+    // (so players can see all cards during the 5s pause)
+    const trickToShow = this.currentTrick.length > 0
+      ? this.currentTrick
+      : (this.lastCompletedTrick || []);
+
+    state.currentTrick = trickToShow.map(c => ({
       playerId: c.playerId,
-      playerName: this.getPlayerName(c.playerId),
+      playerName: c.playerName || this.getPlayerName(c.playerId),
       card: c.card,
     }));
 
