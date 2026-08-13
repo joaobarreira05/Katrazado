@@ -587,13 +587,13 @@ body {
 }
 
 .player-chip-name {
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 800;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100px;
+  max-width: 140px;
 }
 
 .player-chip-lives {
