@@ -244,6 +244,7 @@ const UI = (() => {
       const chip = document.createElement('div');
       let chipClass = 'player-chip';
       if (player.eliminated) chipClass += ' eliminated';
+      if (!player.connected && !player.eliminated) chipClass += ' offline';
       if (state.currentPlayer === player.id) chipClass += ' active-turn';
 
       // Check if blind
@@ -265,13 +266,20 @@ const UI = (() => {
         infoHtml = `<span class="player-chip-info">P: ${bid} | V: ${tricks}</span>`;
       }
 
+      const offlineTag = (!player.connected && !player.eliminated)
+        ? `<span class="player-chip-offline-badge">OFF (${player.offlineRounds || 0}/2)</span>`
+        : '';
+
+      const elimLabel = (player.offlineRounds >= 2) ? 'KICKED' : 'ELIMINADO';
+
       chip.innerHTML = `
         <div style="display:flex;align-items:center;gap:6px;">
           <img src="${getAvatarSrc(player.avatarId || 1)}" class="chip-avatar-img" alt="Avatar" onerror="this.src='/assets/avatars/1.svg'">
           <span class="player-chip-name">${escapeHtml(player.name)}</span>
         </div>
         <span class="player-chip-lives">${hearts}</span>
-        ${player.eliminated ? '<span class="player-chip-eliminated">ELIMINADO</span>' : infoHtml}
+        ${offlineTag}
+        ${player.eliminated ? `<span class="player-chip-eliminated">${elimLabel}</span>` : infoHtml}
       `;
 
       bar.appendChild(chip);
@@ -301,16 +309,24 @@ const UI = (() => {
 
     if (state.isMyTurn) {
       banner.className = 'turn-banner my-turn';
-      textEl.textContent = `✨ É A TUA VEZ DE ${actionText}!`;
+      if (state.isOneCardLeft) {
+        textEl.innerHTML = `✨ É A TUA VEZ! <span class="fast-turn-badge">⚡ 1 CARTA (${state.turnDuration || 6}s)</span>`;
+      } else {
+        textEl.textContent = `✨ É A TUA VEZ DE ${actionText}!`;
+      }
     } else {
       banner.className = 'turn-banner other-turn';
-      textEl.textContent = `A aguardar por ${escapeHtml(state.currentPlayerName || '---')}...`;
+      if (state.isOneCardLeft) {
+        textEl.innerHTML = `A aguardar por ${escapeHtml(state.currentPlayerName || '---')}... <span class="fast-turn-badge">⚡ Rápido</span>`;
+      } else {
+        textEl.textContent = `A aguardar por ${escapeHtml(state.currentPlayerName || '---')}...`;
+      }
     }
 
     if (timerInterval) clearInterval(timerInterval);
 
     const startTime = state.turnStartTime || Date.now();
-    const durationSecs = state.turnDuration || 12;
+    const durationSecs = state.turnDuration || 18;
 
     function tick() {
       const elapsed = (Date.now() - startTime) / 1000;
@@ -651,7 +667,7 @@ const UI = (() => {
     if (!overlay || !details) return;
 
     details.innerHTML = data.eliminated.map(p => `
-      <p class="eliminated-player-name">${escapeHtml(p.playerName)}</p>
+      <p class="eliminated-player-name">${escapeHtml(p.playerName)} ${p.kicked ? '<br><span style="font-size:0.85rem;color:#ff9f43;font-weight:600;">⚠️ Expulso por inatividade (offline há 2 rondas)</span>' : ''}</p>
     `).join('') + '<p style="color:var(--text-secondary);margin-top:16px;">Eliminado(s) do jogo!</p>';
 
     overlay.classList.remove('hidden');
@@ -688,6 +704,98 @@ const UI = (() => {
   }
 
   // =========================================================================
+  // Round History (up to 2 previous rounds)
+  // =========================================================================
+
+  let activeHistoryTabIndex = 0;
+
+  function showRoundHistory(state) {
+    const overlay = document.getElementById('history-overlay');
+    const tabsContainer = document.getElementById('history-tabs-container');
+    const roundView = document.getElementById('history-round-view');
+    if (!overlay || !tabsContainer || !roundView) return;
+
+    const history = state.roundHistory || [];
+
+    if (history.length === 0) {
+      tabsContainer.innerHTML = '';
+      roundView.innerHTML = `
+        <div class="history-empty-state">
+          <span style="font-size:2.5rem;display:block;margin-bottom:8px;">⏳</span>
+          <p style="font-weight:600;font-size:1rem;color:var(--text-primary);">Ainda não há rondas concluídas.</p>
+          <p style="font-size:0.85rem;color:var(--text-secondary);margin-top:6px;">O histórico até às 2 últimas rondas estará disponível a partir do fim da Ronda 1!</p>
+        </div>
+      `;
+      overlay.classList.remove('hidden');
+      return;
+    }
+
+    // Get up to 2 most recent rounds, newest first
+    const recentRounds = history.slice(-2).reverse();
+    if (activeHistoryTabIndex >= recentRounds.length) {
+      activeHistoryTabIndex = 0;
+    }
+
+    // Render tabs if 2 rounds, or indicator if 1 round
+    tabsContainer.innerHTML = recentRounds.map((r, idx) => {
+      const isSelected = idx === activeHistoryTabIndex;
+      const label = idx === 0 ? `Ronda ${r.round} (Última)` : `Ronda ${r.round}`;
+      return `
+        <button class="history-tab-btn ${isSelected ? 'active' : ''}" data-idx="${idx}">
+          ${label}
+        </button>
+      `;
+    }).join('');
+
+    // Attach tab click handlers
+    tabsContainer.querySelectorAll('.history-tab-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        activeHistoryTabIndex = parseInt(e.currentTarget.getAttribute('data-idx'), 10) || 0;
+        showRoundHistory(state);
+      });
+    });
+
+    // Render active round details
+    const selectedRound = recentRounds[activeHistoryTabIndex] || recentRounds[0];
+
+    roundView.innerHTML = `
+      <div class="history-round-banner">
+        <span class="history-round-badge">Ronda ${selectedRound.round}</span>
+        <span class="history-round-cards">${selectedRound.cardsPerPlayer} carta${selectedRound.cardsPerPlayer > 1 ? 's' : ''} por jogador</span>
+      </div>
+      <div class="results-table">
+        ${selectedRound.results.map(r => {
+          const rowClass = r.bidCorrect ? 'correct' : 'wrong';
+          const icon = r.bidCorrect ? '✅' : '❌';
+          const blindTag = r.wasBlind ? ' 🙈' : '';
+          const avatarSrc = getAvatarSrc(r.avatarId || 1);
+          return `
+            <div class="result-row ${rowClass}">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <img src="${avatarSrc}" class="chip-avatar-img" alt="Avatar" onerror="this.src='/assets/avatars/1.svg'">
+                <span class="result-player">${icon} ${escapeHtml(r.playerName)}${blindTag}</span>
+              </div>
+              <div class="result-details">
+                <div class="result-bid-info">
+                  <span>Previsão: <strong>${r.bid}</strong> | Vazas: <strong>${r.tricksWon}</strong></span>
+                  <span class="result-lives">${r.bidCorrect ? 'Manteve vidas' : `-${r.livesLost} vida(s)`} → ${'❤️'.repeat(Math.max(0, r.livesRemaining))}</span>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+
+    overlay.classList.remove('hidden');
+  }
+
+  function hideRoundHistory() {
+    const overlay = document.getElementById('history-overlay');
+    if (overlay) overlay.classList.add('hidden');
+  }
+
+  // =========================================================================
   // Utilities
   // =========================================================================
 
@@ -714,6 +822,8 @@ const UI = (() => {
     showRoundResults,
     showElimination,
     showGameOver,
+    showRoundHistory,
+    hideRoundHistory,
     createCardElement,
     createCardBackElement,
     escapeHtml,

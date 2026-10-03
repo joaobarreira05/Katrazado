@@ -109,6 +109,7 @@
         <span class="cards-label">carta(s)</span>
       </div>
       <div class="top-bar-controls">
+        <button id="btn-show-history" class="btn btn-icon-only btn-history-game" title="Rondas Anteriores" aria-label="Histórico de Rondas">📜</button>
         <button id="btn-toggle-audio" class="btn btn-icon-only" title="Ligar/Desligar Som" aria-label="Som">🔊</button>
         <button id="btn-show-rules-game" class="btn btn-icon-only btn-rules-game" title="Regras" aria-label="Regras">📖</button>
       </div>
@@ -183,6 +184,18 @@
       <div class="overlay-content elimination-content">
         <h2>💀 Eliminação</h2>
         <div id="elimination-details"></div>
+      </div>
+    </div>
+
+    <!-- History Overlay (up to 2 previous rounds) -->
+    <div id="history-overlay" class="overlay hidden">
+      <div class="overlay-content history-content">
+        <div class="history-modal-header">
+          <h2>📜 Rondas Anteriores</h2>
+          <button id="btn-close-history" class="btn btn-icon-only btn-close-modal" aria-label="Fechar">✕</button>
+        </div>
+        <div id="history-tabs-container" class="history-tabs-container"></div>
+        <div id="history-round-view" class="history-round-view"></div>
       </div>
     </div>
   </div>

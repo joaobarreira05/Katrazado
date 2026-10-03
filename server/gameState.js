@@ -36,13 +36,13 @@ class Game {
    * @param {string} hostName - Display name of the host
    * @param {number} [initialLives=5] - Starting lives per player
    */
-  constructor(gameId, hostId, hostName, hostAvatarId = 1, initialLives = engine.DEFAULT_LIVES) {
+  constructor(gameId, hostId, hostName, hostAvatarId = 1, initialLives = engine.DEFAULT_LIVES, hostSessionToken = null) {
     this.gameId = gameId;
     this.hostId = hostId;
     this.initialLives = initialLives;
 
     // Players
-    this.players = new Map(); // socketId → { id, name, avatarId, connected }
+    this.players = new Map(); // socketId → { id, name, avatarId, sessionToken, connected, offlineRounds }
     this.playerOrder = []; // Original order (never changes)
     this.activePlayers = []; // Currently alive players
     this.eliminatedPlayers = []; // Eliminated player IDs
@@ -86,14 +86,14 @@ class Game {
     this.gameState = GAME_STATES.LOBBY;
 
     // Add host as first player
-    this.addPlayer(hostId, hostName, hostAvatarId);
+    this.addPlayer(hostId, hostName, hostAvatarId, hostSessionToken);
   }
 
   // =========================================================================
   // Player Management
   // =========================================================================
 
-  addPlayer(socketId, name, avatarId = 1) {
+  addPlayer(socketId, name, avatarId = 1, sessionToken = null) {
     if (this.gameState !== GAME_STATES.LOBBY) {
       return { success: false, reason: 'O jogo já começou.' };
     }
@@ -111,11 +111,20 @@ class Game {
       }
     }
 
-    const safeAvatar = (avatarId >= 1 && avatarId <= 20) ? avatarId : 1;
-    this.players.set(socketId, { id: socketId, name, avatarId: safeAvatar, connected: true });
+    const safeAvatar = (avatarId >= 1 && avatarId <= 100) ? avatarId : 1;
+    const token = sessionToken || (Math.random().toString(36).substring(2, 10) + Date.now().toString(36));
+
+    this.players.set(socketId, {
+      id: socketId,
+      name,
+      avatarId: safeAvatar,
+      sessionToken: token,
+      connected: true,
+      offlineRounds: 0,
+    });
     this.playerOrder.push(socketId);
 
-    return { success: true };
+    return { success: true, sessionToken: token };
   }
 
   removePlayer(socketId) {
@@ -139,13 +148,107 @@ class Game {
     return { removed: false, disconnected: true };
   }
 
+  updatePlayerSocketId(oldSocketId, newSocketId) {
+    const player = this.players.get(oldSocketId);
+    if (!player) return false;
+
+    player.id = newSocketId;
+    player.connected = true;
+    player.offlineRounds = 0;
+
+    this.players.delete(oldSocketId);
+    this.players.set(newSocketId, player);
+
+    this.playerOrder = this.playerOrder.map(id => (id === oldSocketId ? newSocketId : id));
+    this.activePlayers = this.activePlayers.map(id => (id === oldSocketId ? newSocketId : id));
+    this.eliminatedPlayers = this.eliminatedPlayers.map(id => (id === oldSocketId ? newSocketId : id));
+
+    if (this.lives[oldSocketId] !== undefined) {
+      this.lives[newSocketId] = this.lives[oldSocketId];
+      delete this.lives[oldSocketId];
+    }
+    if (this.livesAtRoundStart[oldSocketId] !== undefined) {
+      this.livesAtRoundStart[newSocketId] = this.livesAtRoundStart[oldSocketId];
+      delete this.livesAtRoundStart[oldSocketId];
+    }
+    if (this.hands[oldSocketId] !== undefined) {
+      this.hands[newSocketId] = this.hands[oldSocketId];
+      delete this.hands[oldSocketId];
+    }
+    if (this.blindBidPlayers.has(oldSocketId)) {
+      this.blindBidPlayers.delete(oldSocketId);
+      this.blindBidPlayers.add(newSocketId);
+    }
+    if (this.revealedPlayers.has(oldSocketId)) {
+      this.revealedPlayers.delete(oldSocketId);
+      this.revealedPlayers.add(newSocketId);
+    }
+    if (this.bids[oldSocketId] !== undefined) {
+      this.bids[newSocketId] = this.bids[oldSocketId];
+      delete this.bids[oldSocketId];
+    }
+    if (this.tricksWon[oldSocketId] !== undefined) {
+      this.tricksWon[newSocketId] = this.tricksWon[oldSocketId];
+      delete this.tricksWon[oldSocketId];
+    }
+    this.trickPlayOrder = this.trickPlayOrder.map(id => (id === oldSocketId ? newSocketId : id));
+
+    if (Array.isArray(this.currentTrick)) {
+      this.currentTrick.forEach(c => {
+        if (c.playerId === oldSocketId) c.playerId = newSocketId;
+      });
+    }
+    if (Array.isArray(this.lastCompletedTrick)) {
+      this.lastCompletedTrick.forEach(c => {
+        if (c.playerId === oldSocketId) c.playerId = newSocketId;
+      });
+    }
+    if (Array.isArray(this.playedCardsHistory)) {
+      this.playedCardsHistory.forEach(c => {
+        if (c.playerId === oldSocketId) c.playerId = newSocketId;
+      });
+    }
+
+    if (this.hostId === oldSocketId) this.hostId = newSocketId;
+    if (this.currentPlayer === oldSocketId) this.currentPlayer = newSocketId;
+    if (this.startingPlayer === oldSocketId) this.startingPlayer = newSocketId;
+    if (this.trickLeader === oldSocketId) this.trickLeader = newSocketId;
+
+    return true;
+  }
+
   reconnectPlayer(socketId) {
     const player = this.players.get(socketId);
     if (player) {
       player.connected = true;
+      player.offlineRounds = 0;
       return true;
     }
     return false;
+  }
+
+  getTurnDuration(playerId) {
+    const player = this.players.get(playerId);
+    if (player && !player.connected) {
+      return 4; // Fast 4s auto-play if player is offline
+    }
+
+    if (this.gameState === GAME_STATES.TRICK_PLAY) {
+      const hand = this.hands[playerId];
+      if (hand && hand.length === 1) {
+        return 6; // Reduced to 6s when player only has 1 card in hand!
+      }
+      return 18;
+    }
+
+    if (this.gameState === GAME_STATES.BIDDING) {
+      if (this.cardsPerPlayer === 1) {
+        return 10; // Faster bidding when only 1 card in hand
+      }
+      return 18;
+    }
+
+    return 18;
   }
 
   getPlayerName(socketId) {
@@ -166,6 +269,7 @@ class Game {
         name: player.name,
         avatarId: player.avatarId || 1,
         connected: player.connected,
+        offlineRounds: player.offlineRounds || 0,
         isHost: id === this.hostId,
         lives: this.lives[id] ?? this.initialLives,
         eliminated: this.eliminatedPlayers.includes(id),
@@ -521,6 +625,18 @@ class Game {
   evaluateRound() {
     this.gameState = GAME_STATES.ROUND_RESULTS;
 
+    // Track consecutive offline rounds for active players
+    for (const playerId of this.activePlayers) {
+      const player = this.players.get(playerId);
+      if (player) {
+        if (!player.connected) {
+          player.offlineRounds = (player.offlineRounds || 0) + 1;
+        } else {
+          player.offlineRounds = 0;
+        }
+      }
+    }
+
     const results = engine.evaluateRound(this.bids, this.tricksWon, this.activePlayers);
 
     // Apply life changes with 1-life minimum safety net rule:
@@ -545,6 +661,7 @@ class Game {
       results: this.activePlayers.map(id => ({
         playerId: id,
         playerName: this.getPlayerName(id),
+        avatarId: this.getPlayerAvatar(id),
         bid: results[id].bid,
         tricksWon: results[id].tricksWon,
         bidCorrect: results[id].bidCorrect,
@@ -566,13 +683,28 @@ class Game {
   checkEliminations() {
     this.gameState = GAME_STATES.ELIMINATION_CHECK;
 
+    // Check for players offline for 2+ consecutive rounds -> KICK
+    const kickedDueToInactivity = [];
+    for (const playerId of this.activePlayers) {
+      const player = this.players.get(playerId);
+      if (player && !player.connected && (player.offlineRounds || 0) >= 2) {
+        this.lives[playerId] = 0;
+        kickedDueToInactivity.push(playerId);
+      }
+    }
+
     const { eliminated, remaining } = engine.checkEliminations(this.lives, this.activePlayers);
 
     const eliminationResult = {
-      eliminated: eliminated.map(id => ({
-        playerId: id,
-        playerName: this.getPlayerName(id),
-      })),
+      eliminated: eliminated.map(id => {
+        const wasKicked = kickedDueToInactivity.includes(id);
+        return {
+          playerId: id,
+          playerName: this.getPlayerName(id),
+          kicked: wasKicked,
+          reason: wasKicked ? 'Expulso por inatividade (offline há 2 rondas)' : null,
+        };
+      }),
       remaining: remaining.map(id => ({
         playerId: id,
         playerName: this.getPlayerName(id),
@@ -583,6 +715,14 @@ class Game {
     // Update active/eliminated lists
     this.eliminatedPlayers.push(...eliminated);
     this.activePlayers = remaining;
+
+    // If host was eliminated, reassign host to the first active player (preferring connected)
+    if (this.hostId && (eliminated.includes(this.hostId) || !this.players.get(this.hostId)?.connected)) {
+      const nextHost = remaining.find(id => this.players.get(id)?.connected) || remaining[0];
+      if (nextHost) {
+        this.hostId = nextHost;
+      }
+    }
 
     // Check game over
     const gameOverCheck = engine.checkGameOver(this.activePlayers);
@@ -645,6 +785,13 @@ class Game {
    * Never sends other players' cards.
    */
   getStateForPlayer(playerId) {
+    const currentTurnPlayer = this.currentPlayer;
+    const turnDuration = currentTurnPlayer ? this.getTurnDuration(currentTurnPlayer) : 18;
+    const isOneCardLeft = (this.gameState === GAME_STATES.TRICK_PLAY &&
+      currentTurnPlayer &&
+      this.hands[currentTurnPlayer] &&
+      this.hands[currentTurnPlayer].length === 1);
+
     const state = {
       gameId: this.gameId,
       gameState: this.gameState,
@@ -653,6 +800,8 @@ class Game {
         id,
         name: this.getPlayerName(id),
         lives: this.lives[id],
+        connected: this.players.get(id)?.connected ?? true,
+        offlineRounds: this.players.get(id)?.offlineRounds ?? 0,
       })),
       eliminatedPlayers: this.eliminatedPlayers.map(id => ({
         id,
@@ -669,7 +818,8 @@ class Game {
       myId: playerId,
       myName: this.getPlayerName(playerId),
       turnStartTime: this.turnStartTime || Date.now(),
-      turnDuration: 20, // 20 seconds per turn
+      turnDuration: turnDuration,
+      isOneCardLeft: !!isOneCardLeft,
     };
 
     // Add player-specific data

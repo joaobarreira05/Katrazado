@@ -8,18 +8,92 @@
 
 (function () {
   // =========================================================================
-  // State
+  // State & Session Persistence
   // =========================================================================
 
   let currentState = null;
   let myId = null;
   let previousScreen = 'screen-home';
 
+  const SESSION_STORAGE_KEY = 'katrazado_session';
+  const PROFILE_NAME_KEY = 'katrazado_player_name';
+
+  function saveSession(gameId, sessionToken, playerName, avatarId) {
+    try {
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+        gameId,
+        sessionToken,
+        playerName,
+        avatarId,
+      }));
+    } catch (e) {
+      console.warn('[App] Could not save session to localStorage', e);
+    }
+  }
+
+  function getSavedSession() {
+    try {
+      const data = localStorage.getItem(SESSION_STORAGE_KEY);
+      return data ? JSON.parse(data) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function clearSavedSession() {
+    try {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  let isReconnectingSession = false;
+
+  function attemptSessionResume() {
+    const session = getSavedSession();
+    if (!session || !session.gameId || !session.sessionToken) return;
+
+    if (isReconnectingSession) return;
+    isReconnectingSession = true;
+
+    console.log('[App] Attempting to resume session for game:', session.gameId);
+
+    SocketClient.emit('reconnect-session', {
+      gameId: session.gameId,
+      sessionToken: session.sessionToken,
+    }, (response) => {
+      isReconnectingSession = false;
+      if (response && response.success) {
+        console.log('[App] Session resumed successfully!', response.state);
+        currentState = response.state;
+        myId = response.state.myId;
+        handleGameState(response.state);
+      } else {
+        console.warn('[App] Session resume rejected:', response ? response.reason : 'unknown');
+        clearSavedSession();
+        UI.showScreen('screen-home');
+        if (response && response.reason) {
+          UI.showError('home-error', response.reason);
+        }
+      }
+    });
+  }
+
   // =========================================================================
   // Initialize
   // =========================================================================
 
   function init() {
+    // Restore saved player name if available
+    try {
+      const savedName = localStorage.getItem(PROFILE_NAME_KEY);
+      if (savedName) {
+        const nameInput = document.getElementById('player-name-input');
+        if (nameInput) nameInput.value = savedName;
+      }
+    } catch (e) {}
+
     // Connect socket
     SocketClient.connect();
 
@@ -30,6 +104,9 @@
       onGameState: handleGameState,
       onPlayerJoined: handlePlayerJoined,
       onPlayerLeft: handlePlayerLeft,
+      onPlayerDisconnected: handlePlayerDisconnected,
+      onPlayerReconnected: handlePlayerReconnected,
+      onPlayerKicked: handlePlayerKicked,
       onGameStarted: handleGameStarted,
       onRoundStarted: handleRoundStarted,
       onCardsDealt: handleCardsDealt,
@@ -127,9 +204,36 @@
     const closeRulesBtn = document.getElementById('btn-close-rules');
     if (closeRulesBtn) closeRulesBtn.addEventListener('click', hideRules);
 
+    // History of previous rounds
+    const historyBtn = document.getElementById('btn-show-history');
+    if (historyBtn) {
+      historyBtn.addEventListener('click', () => {
+        if (currentState) {
+          UI.showRoundHistory(currentState);
+        }
+      });
+    }
+
+    const closeHistoryBtn = document.getElementById('btn-close-history');
+    if (closeHistoryBtn) {
+      closeHistoryBtn.addEventListener('click', () => {
+        UI.hideRoundHistory();
+      });
+    }
+
+    const historyOverlay = document.getElementById('history-overlay');
+    if (historyOverlay) {
+      historyOverlay.addEventListener('click', (e) => {
+        if (e.target === historyOverlay) {
+          UI.hideRoundHistory();
+        }
+      });
+    }
+
     // Game over
     const backHomeBtn = document.getElementById('btn-back-home');
     if (backHomeBtn) backHomeBtn.addEventListener('click', () => {
+      clearSavedSession();
       UI.showScreen('screen-home');
       currentState = null;
     });
@@ -155,10 +259,46 @@
   function handleConnect(id) {
     myId = id;
     console.log('[App] Connected as:', id);
+    attemptSessionResume();
   }
 
   function handleDisconnect(reason) {
     console.log('[App] Disconnected:', reason);
+  }
+
+  function handlePlayerDisconnected(data) {
+    console.log('[App] Player disconnected:', data);
+    if (currentState && currentState.players) {
+      const p = currentState.players.find(x => x.id === data.playerId);
+      if (p) p.connected = false;
+      if (currentState.gameState === 'LOBBY') {
+        UI.updateLobby(currentState);
+      } else {
+        UI.updatePlayersBar(currentState);
+      }
+    }
+  }
+
+  function handlePlayerReconnected(data) {
+    console.log('[App] Player reconnected:', data);
+    if (currentState) {
+      currentState.players = data.players;
+      if (currentState.gameState === 'LOBBY') {
+        UI.updateLobby(currentState);
+      } else {
+        UI.updatePlayersBar(currentState);
+      }
+    }
+  }
+
+  function handlePlayerKicked(data) {
+    console.log('[App] Player kicked for inactivity:', data);
+    if (data.playerId === myId) {
+      clearSavedSession();
+      currentState = null;
+      UI.showScreen('screen-home');
+      UI.showError('home-error', 'Foste expulso da sala por teres ficado offline durante 2 rondas.');
+    }
   }
 
   function handleGameState(state) {
@@ -304,7 +444,10 @@
 
     SocketClient.emit('create-game', { playerName: name, avatarId }, (response) => {
       if (response.success) {
+        try { localStorage.setItem(PROFILE_NAME_KEY, name); } catch (e) {}
+        saveSession(response.gameId, response.sessionToken, name, avatarId);
         currentState = response.state;
+        myId = response.state.myId;
         UI.showScreen('screen-lobby');
         UI.updateLobby(currentState);
       } else {
@@ -337,7 +480,10 @@
 
     SocketClient.emit('join-game', { gameId: code, playerName: name, avatarId }, (response) => {
       if (response.success) {
+        try { localStorage.setItem(PROFILE_NAME_KEY, name); } catch (e) {}
+        saveSession(response.gameId, response.sessionToken, name, avatarId);
         currentState = response.state;
+        myId = response.state.myId;
         UI.showScreen('screen-lobby');
         UI.updateLobby(currentState);
       } else {
@@ -355,8 +501,10 @@
   }
 
   function handleLeaveLobby() {
-    // Just disconnect and reconnect
-    window.location.reload();
+    SocketClient.emit('leave-game', {}, () => {});
+    clearSavedSession();
+    currentState = null;
+    UI.showScreen('screen-home');
   }
 
   function handleCopyCode() {

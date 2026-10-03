@@ -34,6 +34,7 @@ function getGame(socketId) {
 }
 
 const turnTimers = new Map();
+const lobbyDisconnectTimeouts = new Map();
 
 function clearTurnTimer(gameId) {
   if (turnTimers.has(gameId)) {
@@ -52,10 +53,12 @@ function scheduleTurnTimer(io, game) {
   const activePlayer = game.currentPlayer;
   if (!activePlayer) return;
 
+  const durationSecs = game.getTurnDuration(activePlayer);
+
   const timer = setTimeout(() => {
-    console.log(`[Katrazado] 20s timer expired for ${game.getPlayerName(activePlayer)} in ${game.gameState}`);
+    console.log(`[Katrazado] ${durationSecs}s timer expired for ${game.getPlayerName(activePlayer)} in ${game.gameState}`);
     handleTimeoutAction(io, game, activePlayer);
-  }, 20000);
+  }, durationSecs * 1000);
 
   turnTimers.set(game.gameId, timer);
 }
@@ -173,6 +176,18 @@ async function advanceGameFlow(io, game) {
       // After showing results, check eliminations
       const eliminationResult = game.checkEliminations();
       broadcastToGame(io, game, 'elimination-check', eliminationResult);
+
+      // Notify if any players were kicked for 2 rounds offline
+      for (const elim of eliminationResult.eliminated) {
+        if (elim.kicked) {
+          broadcastToGame(io, game, 'player-kicked', {
+            playerId: elim.playerId,
+            playerName: elim.playerName,
+            reason: elim.reason,
+          });
+        }
+      }
+
       broadcastGameState(io, game);
 
       if (eliminationResult.gameOver) {
@@ -242,11 +257,15 @@ function registerSocketHandlers(io) {
       playerGames.set(socket.id, code);
       socket.join(code);
 
+      const hostPlayer = game.players.get(socket.id);
+      const sessionToken = hostPlayer ? hostPlayer.sessionToken : null;
+
       console.log(`[Katrazado] Game created: ${code} by ${playerName} (avatar: ${avatarId || 1})`);
 
       const response = {
         success: true,
         gameId: code,
+        sessionToken,
         state: game.getStateForPlayer(socket.id),
       };
 
@@ -287,6 +306,7 @@ function registerSocketHandlers(io) {
         callback({
           success: true,
           gameId: code,
+          sessionToken: result.sessionToken,
           state: game.getStateForPlayer(socket.id),
         });
       }
@@ -447,7 +467,119 @@ function registerSocketHandlers(io) {
     });
 
     // -----------------------------------------------------------------------
-    // REQUEST STATE (for reconnection)
+    // RECONNECT SESSION (Session persistence across reloads)
+    // -----------------------------------------------------------------------
+    socket.on('reconnect-session', ({ gameId, sessionToken }, callback) => {
+      if (!gameId || !sessionToken) {
+        if (callback) callback({ success: false, reason: 'Dados de sessão inválidos.' });
+        return;
+      }
+
+      const code = gameId.toUpperCase().trim();
+      const game = games.get(code);
+
+      if (!game) {
+        if (callback) callback({ success: false, reason: 'Sala não encontrada ou terminada.' });
+        return;
+      }
+
+      // Find player by sessionToken
+      let targetPlayer = null;
+      let targetOldSocketId = null;
+      for (const [sId, p] of game.players) {
+        if (p.sessionToken === sessionToken) {
+          targetPlayer = p;
+          targetOldSocketId = sId;
+          break;
+        }
+      }
+
+      if (!targetPlayer) {
+        if (callback) callback({ success: false, reason: 'Sessão não encontrada nesta sala.' });
+        return;
+      }
+
+      // Check if player was kicked for inactivity
+      if (targetPlayer.offlineRounds >= 2 && game.eliminatedPlayers.includes(targetOldSocketId)) {
+        if (callback) callback({ success: false, reason: 'Foste expulso por teres ficado offline durante 2 rondas.' });
+        return;
+      }
+
+      // Clear any pending lobby disconnect timeout
+      const lobbyKey = `${game.gameId}_${sessionToken}`;
+      if (lobbyDisconnectTimeouts.has(lobbyKey)) {
+        clearTimeout(lobbyDisconnectTimeouts.get(lobbyKey));
+        lobbyDisconnectTimeouts.delete(lobbyKey);
+      }
+
+      const newSocketId = socket.id;
+
+      if (targetOldSocketId !== newSocketId) {
+        playerGames.delete(targetOldSocketId);
+        playerGames.set(newSocketId, code);
+        socket.join(code);
+        game.updatePlayerSocketId(targetOldSocketId, newSocketId);
+      } else {
+        playerGames.set(newSocketId, code);
+        socket.join(code);
+        targetPlayer.connected = true;
+        targetPlayer.offlineRounds = 0;
+      }
+
+      console.log(`[Katrazado] Player ${targetPlayer.name} reconnected successfully to game ${code}`);
+
+      broadcastToGame(io, game, 'player-reconnected', {
+        playerId: newSocketId,
+        playerName: targetPlayer.name,
+        players: game.getPlayerList(),
+      });
+
+      broadcastGameState(io, game);
+
+      if (callback) {
+        callback({
+          success: true,
+          gameId: code,
+          sessionToken,
+          state: game.getStateForPlayer(newSocketId),
+        });
+      }
+    });
+
+    // -----------------------------------------------------------------------
+    // LEAVE GAME / LEAVE LOBBY
+    // -----------------------------------------------------------------------
+    socket.on('leave-game', (_, callback) => {
+      const game = getGame(socket.id);
+      if (game) {
+        const player = game.players.get(socket.id);
+        if (player) {
+          const lobbyKey = `${game.gameId}_${player.sessionToken}`;
+          if (lobbyDisconnectTimeouts.has(lobbyKey)) {
+            clearTimeout(lobbyDisconnectTimeouts.get(lobbyKey));
+            lobbyDisconnectTimeouts.delete(lobbyKey);
+          }
+        }
+
+        const result = game.removePlayer(socket.id);
+        playerGames.delete(socket.id);
+        socket.leave(game.gameId);
+
+        broadcastToGame(io, game, 'player-left', {
+          playerId: socket.id,
+          players: game.getPlayerList(),
+        });
+
+        if (game.players.size === 0) {
+          games.delete(game.gameId);
+          console.log(`[Katrazado] Game ${game.gameId} deleted (empty)`);
+        }
+      }
+      if (callback) callback({ success: true });
+    });
+
+    // -----------------------------------------------------------------------
+    // REQUEST STATE (for manual state query)
     // -----------------------------------------------------------------------
     socket.on('request-state', (_, callback) => {
       const game = getGame(socket.id);
@@ -471,29 +603,52 @@ function registerSocketHandlers(io) {
       console.log(`[Katrazado] Player disconnected: ${socket.id}`);
 
       const game = getGame(socket.id);
-      if (game) {
-        const result = game.removePlayer(socket.id);
+      if (!game) return;
 
-        if (result.removed) {
-          // Player fully removed (lobby)
-          playerGames.delete(socket.id);
+      const player = game.players.get(socket.id);
 
-          broadcastToGame(io, game, 'player-left', {
-            playerId: socket.id,
-            players: game.getPlayerList(),
-          });
-
-          // Clean up empty games
-          if (game.players.size === 0) {
-            games.delete(game.gameId);
-            console.log(`[Katrazado] Game ${game.gameId} deleted (empty)`);
-          }
-        } else {
-          // Player disconnected mid-game
+      if (game.gameState === GAME_STATES.LOBBY) {
+        // In lobby: do NOT delete immediately! Wait 15s grace period for reload/reconnect.
+        if (player) {
+          player.connected = false;
           broadcastToGame(io, game, 'player-disconnected', {
             playerId: socket.id,
-            playerName: game.getPlayerName(socket.id),
+            playerName: player.name,
           });
+
+          const lobbyKey = `${game.gameId}_${player.sessionToken}`;
+          const timeout = setTimeout(() => {
+            lobbyDisconnectTimeouts.delete(lobbyKey);
+            // If still disconnected after 15s, remove permanently
+            if (!player.connected) {
+              console.log(`[Katrazado] Lobby grace period expired for ${player.name}`);
+              const result = game.removePlayer(player.id);
+              playerGames.delete(player.id);
+              if (result.removed) {
+                broadcastToGame(io, game, 'player-left', {
+                  playerId: player.id,
+                  players: game.getPlayerList(),
+                });
+                if (game.players.size === 0) {
+                  games.delete(game.gameId);
+                  console.log(`[Katrazado] Game ${game.gameId} deleted (empty)`);
+                }
+              }
+            }
+          }, 15000);
+          lobbyDisconnectTimeouts.set(lobbyKey, timeout);
+        }
+      } else {
+        // Mid-game disconnection:
+        game.removePlayer(socket.id);
+        broadcastToGame(io, game, 'player-disconnected', {
+          playerId: socket.id,
+          playerName: game.getPlayerName(socket.id),
+        });
+
+        // If it was this player's turn, re-schedule turn timer with faster offline duration!
+        if (game.currentPlayer === socket.id) {
+          scheduleTurnTimer(io, game);
         }
       }
     });

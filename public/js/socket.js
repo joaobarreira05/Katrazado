@@ -97,6 +97,14 @@ const SocketClient = (() => {
       if (eventHandlers.onNextRound) eventHandlers.onNextRound(data);
     });
 
+    socket.on('player-reconnected', (data) => {
+      if (eventHandlers.onPlayerReconnected) eventHandlers.onPlayerReconnected(data);
+    });
+
+    socket.on('player-kicked', (data) => {
+      if (eventHandlers.onPlayerKicked) eventHandlers.onPlayerKicked(data);
+    });
+
     socket.on('game-over', (data) => {
       if (eventHandlers.onGameOver) eventHandlers.onGameOver(data);
     });
